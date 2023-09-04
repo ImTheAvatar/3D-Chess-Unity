@@ -29,13 +29,13 @@ public class BoardHighlights : MonoBehaviour
         return go;
     }
 
-    public void HighLightAllowedMoves(bool[,] moves)
+    public void HighLightAllowedMoves(bool[,] moves,int x,int y)
     {
         for (int i = 0; i < 8; i++)
         {
             for (int j = 0; j < 8; j++)
             {
-                if (moves[i, j])
+                if (BoardManager.Instance.CheckForAllowedMove(i,j,x,y))
                 {
                     GameObject go = GetHighLightObject();
                     go.SetActive(true);

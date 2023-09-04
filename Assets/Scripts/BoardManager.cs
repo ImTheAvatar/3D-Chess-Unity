@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class BoardManager : MonoBehaviour
 {
+    [SerializeField] Transform CameraPos1,CameraPos2;
     public static BoardManager Instance { get; set; }
     private bool[,] allowedMoves { get; set; }
 
@@ -30,17 +33,28 @@ public class BoardManager : MonoBehaviour
 
     public int[] EnPassantMove { set; get; }
 
+    System.Action OnTurnChange;
     // Use this for initialization
     void Start()
     {
         Instance = this;
         SpawnAllChessmans();
         EnPassantMove = new int[2] { -1, -1 };
+        OnTurnChange += TurnChange;
+    }
+    public bool CheckForAllowedMove(int x, int y ,int posx=0,int posy=0)
+    {
+        Debug.Log("checking : " + x + " " + y);
+        Debug.Log(DiceBehaviour.Instance.Dice1 + " " + DiceBehaviour.Instance.Dice2);
+        Debug.Log(posx + " " + posy);
+        return allowedMoves[x, y] &&
+            (Mathf.Abs(x-posx) + Mathf.Abs(y-posy) == DiceBehaviour.Instance.Dice1 || Mathf.Abs(x-posx) + Mathf.Abs(y-posy) == DiceBehaviour.Instance.Dice2);
     }
 
     // Update is called once per frame
     void Update()
     {
+        if (DiceBehaviour.Instance.Locked) return;
         UpdateSelection();
 
         if (Input.GetMouseButtonDown(0))
@@ -77,9 +91,10 @@ public class BoardManager : MonoBehaviour
         {
             for (int j = 0; j < 8; j++)
             {
-                if (allowedMoves[i, j])
+                if (CheckForAllowedMove(i,j,x,y))
                 {
                     hasAtLeastOneMove = true;
+                    Debug.LogError("Has one move, and its " + i + " " + j);
                     i = 8;
                     break;
                 }
@@ -87,19 +102,22 @@ public class BoardManager : MonoBehaviour
         }
 
         if (!hasAtLeastOneMove)
+        {
+            Debug.LogError("No allowed move");
             return;
+        }
 
         selectedChessman = Chessmans[x, y];
         previousMat = selectedChessman.GetComponent<MeshRenderer>().material;
         selectedMat.mainTexture = previousMat.mainTexture;
         selectedChessman.GetComponent<MeshRenderer>().material = selectedMat;
 
-        BoardHighlights.Instance.HighLightAllowedMoves(allowedMoves);
+        BoardHighlights.Instance.HighLightAllowedMoves(allowedMoves,x,y);
     }
 
     private void MoveChessman(int x, int y)
     {
-        if (allowedMoves[x, y])
+        if (CheckForAllowedMove(x,y))
         {
             Chessman c = Chessmans[x, y];
 
@@ -156,7 +174,7 @@ public class BoardManager : MonoBehaviour
             selectedChessman.transform.position = GetTileCenter(x, y);
             selectedChessman.SetPosition(x, y);
             Chessmans[x, y] = selectedChessman;
-            isWhiteTurn = !isWhiteTurn;
+            OnTurnChange?.Invoke();
         }
 
         selectedChessman.GetComponent<MeshRenderer>().material = previousMat;
@@ -164,7 +182,21 @@ public class BoardManager : MonoBehaviour
         BoardHighlights.Instance.HideHighlights();
         selectedChessman = null;
     }
-
+    public void TurnChange()
+    {
+        isWhiteTurn = !isWhiteTurn;
+        if (isWhiteTurn)
+        {
+            Camera.main.transform.position = CameraPos1.position;
+            Camera.main.transform.rotation = CameraPos1.rotation;
+        }
+        else
+        {
+            Camera.main.transform.position = CameraPos2.position;
+            Camera.main.transform.rotation = CameraPos2.rotation;
+        }
+        DiceBehaviour.Instance.MakeRandomDice();
+    }
     private void UpdateSelection()
     {
         if (!Camera.main) return;
