@@ -16,9 +16,8 @@ public class DiceBehaviour :MonoBehaviour
     {
         Instance= this;
         dice1Im.sprite=null; dice2Im.sprite=null;
-        MakeRandomDice();
     }
-    public async Task MakeRandomDice()
+    public async Task<bool> MakeRandomDice()
     {
         Locked = true;
         for (int i = 0; i < numbers.Count; i++)
@@ -35,5 +34,6 @@ public class DiceBehaviour :MonoBehaviour
         Dice1++;
         Dice2++;
         Locked = false;
+        return true;
     }
 }

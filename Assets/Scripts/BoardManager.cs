@@ -26,7 +26,7 @@ public class BoardManager : MonoBehaviour
     public Chessman[,] Chessmans { get; set; }
     private Chessman selectedChessman;
 
-    public bool isWhiteTurn = true;
+    public bool isWhiteTurn = false;
 
     private Material previousMat;
     public Material selectedMat;
@@ -41,16 +41,59 @@ public class BoardManager : MonoBehaviour
         SpawnAllChessmans();
         EnPassantMove = new int[2] { -1, -1 };
         OnTurnChange += TurnChange;
+        OnTurnChange?.Invoke();
     }
-    public bool CheckForAllowedMove(int x, int y ,int posx=0,int posy=0)
+    public bool CheckForAllowedMove(int x, int y, int posx, int posy)
     {
-        Debug.Log("checking : " + x + " " + y);
-        Debug.Log(DiceBehaviour.Instance.Dice1 + " " + DiceBehaviour.Instance.Dice2);
-        Debug.Log(posx + " " + posy);
+        var pureX = Mathf.Abs(x - posx);
+        var pureY = Mathf.Abs(y - posy);
+        int singleIn,singleOut;
+        if (pureX < pureY)
+        {
+            singleIn = pureY - pureX;
+            singleOut = pureX;
+        }
+        else
+        {
+            singleIn = pureX-pureY;
+            singleOut = pureY;
+        }
         return allowedMoves[x, y] &&
-            (Mathf.Abs(x-posx) + Mathf.Abs(y-posy) == DiceBehaviour.Instance.Dice1 || Mathf.Abs(x-posx) + Mathf.Abs(y-posy) == DiceBehaviour.Instance.Dice2);
+            (singleIn+singleOut == DiceBehaviour.Instance.Dice1 || singleIn + singleOut == DiceBehaviour.Instance.Dice2);
     }
-
+    bool CheckForSelectionPossibility()
+    {
+        foreach(var chessman in Chessmans)
+        {
+            if (chessman == null) continue;
+            if (chessman.isWhite != isWhiteTurn) continue;
+            if (CheckForChessmanMovePossibility(chessman.CurrentX,chessman.CurrentY))
+            {
+                Debug.Log("chessman " + chessman.CurrentX + " " + chessman.CurrentY + " can move");
+                return true;
+            }
+        }
+        Debug.Log("no chessman could move with "+DiceBehaviour.Instance.Dice1+" "+ DiceBehaviour.Instance.Dice2);
+        return false;
+    }
+    bool CheckForChessmanMovePossibility(int x,int y)
+    {
+        bool hasAtLeastOneMove = false;
+        allowedMoves = Chessmans[x, y].PossibleMoves();
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 8; j++)
+            {
+                if (CheckForAllowedMove(i, j, x, y))
+                {
+                    hasAtLeastOneMove = true;
+                    i = 8;
+                    break;
+                }
+            }
+        }
+        return hasAtLeastOneMove;
+    }
     // Update is called once per frame
     void Update()
     {
@@ -94,7 +137,6 @@ public class BoardManager : MonoBehaviour
                 if (CheckForAllowedMove(i,j,x,y))
                 {
                     hasAtLeastOneMove = true;
-                    Debug.LogError("Has one move, and its " + i + " " + j);
                     i = 8;
                     break;
                 }
@@ -117,7 +159,7 @@ public class BoardManager : MonoBehaviour
 
     private void MoveChessman(int x, int y)
     {
-        if (CheckForAllowedMove(x,y))
+        if (CheckForAllowedMove(x,y,selectedChessman.CurrentX,selectedChessman.CurrentY))
         {
             Chessman c = Chessmans[x, y];
 
@@ -182,7 +224,7 @@ public class BoardManager : MonoBehaviour
         BoardHighlights.Instance.HideHighlights();
         selectedChessman = null;
     }
-    public void TurnChange()
+    public async void TurnChange()
     {
         isWhiteTurn = !isWhiteTurn;
         if (isWhiteTurn)
@@ -195,7 +237,15 @@ public class BoardManager : MonoBehaviour
             Camera.main.transform.position = CameraPos2.position;
             Camera.main.transform.rotation = CameraPos2.rotation;
         }
-        DiceBehaviour.Instance.MakeRandomDice();
+        var res=await DiceBehaviour.Instance.MakeRandomDice();
+        if (res)
+        {
+            if (!CheckForSelectionPossibility())
+            {
+                await Task.Delay(2000);
+                OnTurnChange?.Invoke();
+            }
+        }
     }
     private void UpdateSelection()
     {
