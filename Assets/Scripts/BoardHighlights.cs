@@ -6,9 +6,10 @@ public class BoardHighlights : MonoBehaviour
 {
 
     public static BoardHighlights Instance { set; get; }
-
+    [SerializeField] GameObject chessPieceHighlightPrefab;
     public GameObject highlightPrefab;
     private List<GameObject> highlights;
+    
 
     private void Start()
     {
@@ -16,8 +17,14 @@ public class BoardHighlights : MonoBehaviour
         highlights = new List<GameObject>();
     }
 
-    private GameObject GetHighLightObject()
+    private GameObject GetHighLightObject(bool chessPiece=false)
     {
+        if(chessPiece)
+        {
+            var go2 = Instantiate(chessPieceHighlightPrefab);
+            highlights.Add(go2);
+            return go2;
+        }
         GameObject go = highlights.Find(g => !g.activeSelf);
 
         if (go == null)
@@ -35,7 +42,7 @@ public class BoardHighlights : MonoBehaviour
         {
             for (int j = 0; j < 8; j++)
             {
-                if (BoardManager.Instance.CheckForAllowedMove(i,j,x,y))
+                if (BoardManager.Instance.CheckForAllowedMove(i, j, x, y, BoardManager.Instance.Chessmans[x,y]))
                 {
                     GameObject go = GetHighLightObject();
                     go.SetActive(true);
@@ -43,6 +50,28 @@ public class BoardHighlights : MonoBehaviour
                 }
             }
 
+        }
+    }
+    public void HighLightAllowedChessman()
+    {
+        foreach (var chessman in BoardManager.Instance.Chessmans)
+        {
+            if (chessman == null) continue;
+            if (chessman.isWhite != BoardManager.Instance.isWhiteTurn) continue;
+            var possibleMoves = chessman.PossibleMoves();
+            for (int i=0;i<8;i++)
+            {
+                for (int j = 0; j < 8; j++)
+                {
+                    if (!possibleMoves[i, j]) continue;
+                    if (BoardManager.Instance.CheckForAllowedMove(i, j, chessman.CurrentX, chessman.CurrentY, chessman))
+                    {
+                        GameObject go = GetHighLightObject(true);
+                        go.SetActive(true);
+                        go.transform.position = new Vector3(chessman.CurrentX + 0.5f, 0.0001f, chessman.CurrentY + 0.5f);
+                    }
+                }
+            }
         }
     }
 

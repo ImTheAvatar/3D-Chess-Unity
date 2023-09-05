@@ -1005,6 +1005,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 730f3fa9696864d48b33cc333af75ec3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  chessPieceHighlightPrefab: {fileID: 1821335647474746, guid: 58cda456d9d65e344a597a40438c3b65,
+    type: 3}
   highlightPrefab: {fileID: 1821335647474746, guid: d8f23b27334db604e86e774f68c316cd,
     type: 3}
 --- !u!1 &2019009797

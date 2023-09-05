@@ -43,7 +43,7 @@ public class BoardManager : MonoBehaviour
         OnTurnChange += TurnChange;
         OnTurnChange?.Invoke();
     }
-    public bool CheckForAllowedMove(int x, int y, int posx, int posy)
+    public bool CheckForAllowedMove(int x, int y, int posx, int posy,Chessman type=null)
     {
         var pureX = Mathf.Abs(x - posx);
         var pureY = Mathf.Abs(y - posy);
@@ -58,23 +58,33 @@ public class BoardManager : MonoBehaviour
             singleIn = pureX-pureY;
             singleOut = pureY;
         }
+        if (type != null)
+        {
+            if (type.isWhite == isWhiteTurn)
+            {
+                if (type is Knight)
+                {
+                    singleIn++;
+                }
+            }
+        }
         return allowedMoves[x, y] &&
             (singleIn+singleOut == DiceBehaviour.Instance.Dice1 || singleIn + singleOut == DiceBehaviour.Instance.Dice2);
     }
     bool CheckForSelectionPossibility()
     {
+        bool found = false;
         foreach(var chessman in Chessmans)
         {
             if (chessman == null) continue;
             if (chessman.isWhite != isWhiteTurn) continue;
             if (CheckForChessmanMovePossibility(chessman.CurrentX,chessman.CurrentY))
             {
-                Debug.Log("chessman " + chessman.CurrentX + " " + chessman.CurrentY + " can move");
-                return true;
+                BoardHighlights.Instance.HighLightAllowedChessman();
+                found = true;
             }
         }
-        Debug.Log("no chessman could move with "+DiceBehaviour.Instance.Dice1+" "+ DiceBehaviour.Instance.Dice2);
-        return false;
+        return found;
     }
     bool CheckForChessmanMovePossibility(int x,int y)
     {
@@ -84,7 +94,7 @@ public class BoardManager : MonoBehaviour
         {
             for (int j = 0; j < 8; j++)
             {
-                if (CheckForAllowedMove(i, j, x, y))
+                if (CheckForAllowedMove(i, j, x, y, Chessmans[x, y]))
                 {
                     hasAtLeastOneMove = true;
                     i = 8;
@@ -134,7 +144,7 @@ public class BoardManager : MonoBehaviour
         {
             for (int j = 0; j < 8; j++)
             {
-                if (CheckForAllowedMove(i,j,x,y))
+                if (CheckForAllowedMove(i,j,x,y, Chessmans[x, y]))
                 {
                     hasAtLeastOneMove = true;
                     i = 8;
@@ -159,7 +169,7 @@ public class BoardManager : MonoBehaviour
 
     private void MoveChessman(int x, int y)
     {
-        if (CheckForAllowedMove(x,y,selectedChessman.CurrentX,selectedChessman.CurrentY))
+        if (CheckForAllowedMove(x,y,selectedChessman.CurrentX,selectedChessman.CurrentY, selectedChessman))
         {
             Chessman c = Chessmans[x, y];
 
@@ -226,6 +236,7 @@ public class BoardManager : MonoBehaviour
     }
     public async void TurnChange()
     {
+        await Task.Delay(1000);
         isWhiteTurn = !isWhiteTurn;
         if (isWhiteTurn)
         {
